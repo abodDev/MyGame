@@ -1,0 +1,24 @@
+{
+  "name": "mygame",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [
+    "Roblox",
+    "Nevermore",
+    "Lua"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@quenty/binder": "^14.0.0",
+    "@quenty/characterutils": "^12.0.0",
+    "@quenty/clienttranslator": "^14.0.0",
+    "@quenty/cmdrservice": "^13.0.0",
+    "@quenty/loader": "^10.0.0",
+    "@quenty/maid": "^3.0.0",
+    "@quenty/servicebag": "^11.0.0",
+    "@quenty/spring": "^10.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
