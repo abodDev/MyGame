@@ -13,7 +13,7 @@ function MyGameServiceClient:Init(serviceBag)
 
 	-- External
 	self._serviceBag:GetService(require("CmdrServiceClient"))
-	
+
 	-- Internal
 	self._serviceBag:GetService(require("MyGameBindersClient"))
 	self._serviceBag:GetService(require("MyGameTranslator"))
