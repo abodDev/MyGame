@@ -3,30 +3,35 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
-local dampingValue = Instance.new("IntValue")
-dampingValue.Name = "dampingValue"
-dampingValue.Parent = Workspace
-dampingValue.Value = 1
-
-local speedValue = Instance.new("IntValue")
-speedValue.Name = "speedValue"
-speedValue.Parent = Workspace
-speedValue.Value = 20
-
 local require = require(script.Parent.loader).load(script)
 
 local BaseObject = require("BaseObject")
 local Spring = require("Spring")
+local CharacterUtils = require("CharacterUtils")
 
 local positionSpring = Spring.new(Vector3.new())
 local anglesSpring = Spring.new(Vector3.new())
 
-local Car = setmetatable({}, BaseObject)
-Car.ClassName = "Car"
-Car.__index = Car
+local dampingValue = Instance.new("NumberValue")
+dampingValue.Name = "dampingValue"
+dampingValue.Parent = Workspace
+dampingValue.Value = 1
 
-function Car.new(humanoid: Humanoid, serviceBag)
-	local self = setmetatable(BaseObject.new(humanoid), Car)
+local speedValue = Instance.new("NumberValue")
+speedValue.Name = "speedValue"
+speedValue.Parent = Workspace
+speedValue.Value = 20
+
+local Driver = setmetatable({}, BaseObject)
+Driver.ClassName = "Car"
+Driver.__index = Driver
+
+function Driver.new(humanoid: Humanoid, serviceBag)
+	if CharacterUtils.getPlayerFromCharacter(humanoid.Parent) ~= Players.LocalPlayer then
+		return
+	end
+
+	local self = setmetatable(BaseObject.new(humanoid), Driver)
 	self._serviceBag = assert(serviceBag, "No serviceBag")
 
 	self._maid:GiveTask(RunService.Heartbeat:Connect(function()
@@ -48,7 +53,7 @@ function Car.new(humanoid: Humanoid, serviceBag)
 	return self
 end
 
-function Car:_drive()
+function Driver:_drive()
 	local SeatPart: VehicleSeat = self._obj.SeatPart
 	local MaxAngularVelocity = SeatPart.MaxSpeed / (SeatPart.Parent.WheelBR.Size.Y / 2)
 
@@ -64,7 +69,7 @@ function Car:_drive()
 	CylindricalConstraintBR.AngularVelocity = angularVelocity
 end
 
-function Car:_rotate()
+function Driver:_rotate()
 	local SeatPart: VehicleSeat = self._obj.SeatPart
 	local AttachmentFL = SeatPart.Parent.Body.AttachmentFL
 	local AttachmentFR = SeatPart.Parent.Body.AttachmentFR
@@ -75,29 +80,47 @@ function Car:_rotate()
 	TweenService:Create(AttachmentFR, tweenInfo, { Orientation = orientation }):Play()
 end
 
-function Car:_cameraFollowCar()
-	local function CFrameToPosOri(cf)
-		local pos = cf.Position
-		local rx, ry, rz = cf:ToOrientation()
-		local ori = Vector3.new(math.deg(rx), math.deg(ry), math.deg(rz))
-		return pos, ori
-	end
-
-	local function PosOriToCFrame(pos, ori)
-		local cf = CFrame.fromEulerAnglesXYZ(math.rad(ori.X), math.rad(ori.Y), math.rad(ori.Z))
-		cf = cf + pos
-		return cf
-	end
-
+function Driver:_cameraFollowCar()
 	anglesSpring.s = speedValue.Value
 	positionSpring.s = speedValue.Value
 
 	anglesSpring.d = dampingValue.Value
 	positionSpring.d = dampingValue.Value
 
+	local function getPositionAndAnglesFromCFrame(cf)
+		return cf.Position, Vector3.new(cf:ToEulerAnglesXYZ())
+	end
+
+	local function getCFrameFromPositionAndAngles(pos, ang)
+		return CFrame.new(pos) * CFrame.Angles(ang.X, ang.Y, ang.Z)
+	end
+
+	local function _getClosestAngle(new: number, old: number)
+		while math.abs(new - old) > math.pi do
+			if new > old then
+				new -= math.pi * 2
+			else
+				new += math.pi * 2
+			end
+		end
+
+		return new
+	end
+
+	local function getClosestAngles(new: Vector3, old: Vector3)
+		return Vector3.new(
+			_getClosestAngle(new.X, old.X),
+			_getClosestAngle(new.Y, old.Y),
+			_getClosestAngle(new.Z, old.Z)
+		)
+	end
+
 	local cameraCFrameGoal = self._obj.SeatPart.CFrame * CFrame.new(0, 6, 20)
 
-	local cameraPosGoal, cameraOriGoal = CFrameToPosOri(cameraCFrameGoal)
+	local cameraPosGoal, rawcameraOriGoal = getPositionAndAnglesFromCFrame(cameraCFrameGoal)
+
+	local perviousCameraOriGoal = anglesSpring.t
+	local cameraOriGoal = getClosestAngles(rawcameraOriGoal, perviousCameraOriGoal)
 
 	anglesSpring.t = cameraOriGoal
 	positionSpring.t = cameraPosGoal
@@ -105,10 +128,10 @@ function Car:_cameraFollowCar()
 	local cameraOri = anglesSpring.p
 	local cameraPos = positionSpring.p
 
-	local finalCameraCFrame = PosOriToCFrame(cameraPos, cameraOri)
+	local finalCameraCFrame = getCFrameFromPositionAndAngles(cameraPos, cameraOri)
 
 	Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
 	Workspace.CurrentCamera.CFrame = finalCameraCFrame
 end
 
-return Car
+return Driver

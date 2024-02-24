@@ -16,7 +16,8 @@
     "@quenty/loader": "^10.0.0",
     "@quenty/maid": "^3.0.0",
     "@quenty/servicebag": "^11.0.0",
-    "@quenty/spring": "^10.0.0"
+    "@quenty/spring": "^10.0.0",
+    "@quenty/vector3utils": "^10.0.0"
   },
   "publishConfig": {
     "access": "restricted"

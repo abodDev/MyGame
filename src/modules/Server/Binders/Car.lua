@@ -35,6 +35,10 @@ function Car.new(obj, serviceBag)
 		end
 	end))
 
+	self._maid:GiveTask(function()
+		CollectionService:RemoveTag(CharacterUtils.getPlayerHumanoid(self._driver), "Driver")
+	end)
+
 	return self
 end
 
