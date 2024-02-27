@@ -10,17 +10,6 @@ local Spring = require("Spring")
 local CharacterUtils = require("CharacterUtils")
 
 local positionSpring = Spring.new(Vector3.new())
-local anglesSpring = Spring.new(Vector3.new())
-
-local dampingValue = Instance.new("NumberValue")
-dampingValue.Name = "dampingValue"
-dampingValue.Parent = Workspace
-dampingValue.Value = 1
-
-local speedValue = Instance.new("NumberValue")
-speedValue.Name = "speedValue"
-speedValue.Parent = Workspace
-speedValue.Value = 20
 
 local Driver = setmetatable({}, BaseObject)
 Driver.ClassName = "Car"
@@ -35,7 +24,7 @@ function Driver.new(humanoid: Humanoid, serviceBag)
 	self._serviceBag = assert(serviceBag, "No serviceBag")
 
 	self._maid:GiveTask(RunService.Heartbeat:Connect(function()
-		self:_cameraFollowCar()
+		self:_updateCamera()
 	end))
 
 	self._maid:GiveTask(self._obj.SeatPart.Changed:Connect(function(property)
@@ -80,58 +69,24 @@ function Driver:_rotate()
 	TweenService:Create(AttachmentFR, tweenInfo, { Orientation = orientation }):Play()
 end
 
-function Driver:_cameraFollowCar()
-	anglesSpring.s = speedValue.Value
-	positionSpring.s = speedValue.Value
+function Driver:_updateCamera()
+	positionSpring.s = 15
+	positionSpring.d = 1
 
-	anglesSpring.d = dampingValue.Value
-	positionSpring.d = dampingValue.Value
-
-	local function getPositionAndAnglesFromCFrame(cf)
-		return cf.Position, Vector3.new(cf:ToEulerAnglesXYZ())
+	local function getPositionFromCFrame(cf)
+		return cf.Position
 	end
 
-	local function getCFrameFromPositionAndAngles(pos, ang)
-		return CFrame.new(pos) * CFrame.Angles(ang.X, ang.Y, ang.Z)
-	end
+	local cameraCFrameGoal = self._obj.SeatPart.CFrame * CFrame.new(0, 6, 16)
 
-	local function _getClosestAngle(new: number, old: number)
-		while math.abs(new - old) > math.pi do
-			if new > old then
-				new -= math.pi * 2
-			else
-				new += math.pi * 2
-			end
-		end
+	local cameraPosGoal = getPositionFromCFrame(cameraCFrameGoal)
 
-		return new
-	end
-
-	local function getClosestAngles(new: Vector3, old: Vector3)
-		return Vector3.new(
-			_getClosestAngle(new.X, old.X),
-			_getClosestAngle(new.Y, old.Y),
-			_getClosestAngle(new.Z, old.Z)
-		)
-	end
-
-	local cameraCFrameGoal = self._obj.SeatPart.CFrame * CFrame.new(0, 6, 20)
-
-	local cameraPosGoal, rawcameraOriGoal = getPositionAndAnglesFromCFrame(cameraCFrameGoal)
-
-	local perviousCameraOriGoal = anglesSpring.t
-	local cameraOriGoal = getClosestAngles(rawcameraOriGoal, perviousCameraOriGoal)
-
-	anglesSpring.t = cameraOriGoal
 	positionSpring.t = cameraPosGoal
 
-	local cameraOri = anglesSpring.p
 	local cameraPos = positionSpring.p
 
-	local finalCameraCFrame = getCFrameFromPositionAndAngles(cameraPos, cameraOri)
-
 	Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
-	Workspace.CurrentCamera.CFrame = finalCameraCFrame
+	Workspace.CurrentCamera.CFrame = CFrame.new(cameraPos, self._obj.SeatPart.Position + Vector3.new(0, 6, 0))
 end
 
 return Driver
